@@ -7,6 +7,7 @@
 #include <dt-bindings/pinctrl/qcom,pmic-gpio.h>
 #include <dt-bindings/regulator/qcom,rpmh-regulator.h>
 #include "sm6350.dtsi"
+#include "pm6150l.dtsi"
 #include "pm6350.dtsi"
 
 / {
@@ -28,7 +29,6 @@
 			height = <2520>;
 			stride = <(1080 * 4)>;
 			format = "a8r8g8b8";
-			clocks = <&gcc GCC_DISP_AXI_CLK>;
 		};
 	};
 
@@ -42,6 +42,15 @@
 			linux,code = <KEY_VOLUMEDOWN>;
 			gpios = <&pm6350_gpios 2 GPIO_ACTIVE_LOW>;
 		};
+	};
+
+	lcdb_dummy: regulator-lcdb-dummy {
+		compatible = "regulator-fixed";
+		regulator-name = "lcdb_dummy";
+		regulator-min-microvolt = <5500000>;
+		regulator-max-microvolt = <5500000>;
+		regulator-always-on;
+		regulator-boot-on;
 	};
 
 	touch_en_vreg: touch-en-regulator {
@@ -285,6 +294,14 @@
 	status = "okay";
 };
 
+&gpu {
+	status = "okay";
+};
+
+&gpu_zap_shader {
+	firmware-name = "qcom/sm6350/sony/pdx213/a615_zap.mbn";
+};
+
 &i2c8 {
 	clock-frequency = <400000>;
 	status = "okay";
@@ -299,6 +316,58 @@
 
 		pinctrl-names = "default";
 		pinctrl-0 = <&ts_int_default &ts_active>;
+	};
+};
+
+&mdss {
+	status = "okay";
+};
+
+&mdss_dsi0 {
+	vdda-supply = <&pm6350_l22>;
+
+	status = "okay";
+
+	panel@0 {
+		compatible = "samsung,sofef01-m-ams597ut04";
+		reg = <0>;
+
+		reset-gpios = <&pm6150l_gpios 9 GPIO_ACTIVE_LOW>;
+
+		vci-supply = <&pm6350_l6>;
+		vddio-supply = <&pm6350_l11>;
+		vsn-supply = <&lcdb_dummy>;
+		vsp-supply = <&lcdb_dummy>;
+
+		pinctrl-0 = <&te_gpio &panel_reset_pin>;
+		pinctrl-names = "default";
+
+		port {
+			panel_in: endpoint {
+				remote-endpoint = <&mdss_dsi0_out>;
+			};
+		};
+	};
+};
+
+&mdss_dsi0_out {
+	remote-endpoint = <&panel_in>;
+	data-lanes = <0 1 2 3>;
+};
+
+&mdss_dsi0_phy {
+	vdds-supply = <&pm6350_l11>;
+
+	status = "okay";
+};
+
+&pm6150l_gpios {
+	panel_reset_pin: panel-reset-state {
+		pins = "gpio9";
+		function = "func1";
+		power-source = <1>;
+		bias-disable;
+		output-low;
 	};
 };
 
@@ -367,6 +436,13 @@
 		function = "gpio";
 		drive-strength = <2>;
 		bias-disable;
+	};
+
+	te_gpio: te-default-state {
+		pins = "gpio23";
+		function = "mdp_vsync";
+		drive-strength = <2>;
+		bias-pull-down;
 	};
 };
 
