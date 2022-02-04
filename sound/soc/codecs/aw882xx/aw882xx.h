@@ -99,7 +99,6 @@ typedef struct snd_soc_codec_driver aw_snd_soc_codec_driver_t;
 #endif
 
 struct aw_componet_codec_ops {
-	aw_snd_soc_codec_t *(*aw_snd_soc_kcontrol_codec)(struct snd_kcontrol *kcontrol);
 	void *(*aw_snd_soc_codec_get_drvdata)(aw_snd_soc_codec_t *codec);
 	int (*aw_snd_soc_add_codec_controls)(aw_snd_soc_codec_t *codec,
 		const struct snd_kcontrol_new *controls,
@@ -130,8 +129,8 @@ struct aw882xx {
 	unsigned int hagce_val;
 	unsigned int rmse_val;
 
-	int reset_gpio;
-	int irq_gpio;
+	struct gpio_desc *reset_gpio;
+	struct gpio_desc *irq_gpio;
 	int aw882xx_pa_switch;
 	int is_power_on;
 	int audio_stream_st;

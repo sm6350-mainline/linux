@@ -17,7 +17,6 @@
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
-#include <linux/of_gpio.h>
 #include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/firmware.h>
@@ -772,7 +771,7 @@ exit:
 	mutex_unlock(&g_aw_monitor_lock);
 }
 
-int aw882xx_load_monitor_profile(struct aw882xx_monitor *monitor)
+static int aw882xx_load_monitor_profile(struct aw882xx_monitor *monitor)
 {
 	int ret;
 	struct aw882xx *aw882xx = container_of(monitor,
@@ -783,7 +782,7 @@ int aw882xx_load_monitor_profile(struct aw882xx_monitor *monitor)
 			__func__, monitor->is_enable);
 		ret = 0;
 	} else {
-		ret = request_firmware_nowait(THIS_MODULE, FW_ACTION_HOTPLUG,
+		ret = request_firmware_nowait(THIS_MODULE, FW_ACTION_UEVENT,
 				AW_MONITOR_FILE,
 				aw882xx->dev, GFP_KERNEL, aw882xx,
 				aw_monitor_profile_loaded);
@@ -800,7 +799,7 @@ static void aw882xx_monitor_load_fw_work_func(struct work_struct *work)
 	aw882xx_load_monitor_profile(monitor);
 }
 
-void aw882xx_deinit_monitor_profile(struct aw882xx_monitor *monitor)
+static void aw882xx_deinit_monitor_profile(struct aw882xx_monitor *monitor)
 {
 	struct aw_monitor_cfg *monitor_cfg = monitor->monitor_cfg;
 

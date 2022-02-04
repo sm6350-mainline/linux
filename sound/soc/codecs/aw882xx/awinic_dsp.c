@@ -75,19 +75,27 @@ extern int aw_send_afe_tx_module_enable(void *buf, int size);
 #else
 static int afe_get_topology(int port_id)
 {
+	if (!aw_afe_fn)
+		return -ENODEV;
 	return aw_afe_fn->afe_get_topology(port_id);
 }
 static int aw_send_afe_cal_apr(uint32_t param_id,
 	void *buf, int cmd_size, bool write)
 {
+	if (!aw_afe_fn)
+		return -ENODEV;
 	return aw_afe_fn->aw_send_afe_cal_apr(param_id,buf,cmd_size,write);
 }
 static int aw_send_afe_rx_module_enable(void *buf, int size)
 {
+	if (!aw_afe_fn)
+		return -ENODEV;
 	return aw_afe_fn->aw_send_afe_rx_module_enable(buf,size);
 }
 static int aw_send_afe_tx_module_enable(void *buf, int size)
 {
+	if (!aw_afe_fn)
+		return -ENODEV;
 	return aw_afe_fn->aw_send_afe_tx_module_enable(buf,size);
 }
 #endif
@@ -329,7 +337,7 @@ static int aw_qcom_write_data_to_dsp(int index, void *data, int data_size, int c
 	if (ret < 0)
 		return ret;
 
-	while (try < AW_DSP_TRY_TIME) {
+	while (false /*try < AW_DSP_TRY_TIME*/) {
 		if (aw_check_dsp_ready()) {
 			mutex_lock(&g_dsp_lock);
 			ret = aw_send_afe_cal_apr(param_id, data,
@@ -356,7 +364,7 @@ static int aw_qcom_read_data_from_dsp(int index, void *data, int data_size, int 
 	if (ret < 0)
 		return ret;
 
-	while (try < AW_DSP_TRY_TIME) {
+	while (false /*try < AW_DSP_TRY_TIME*/) {
 		if (aw_check_dsp_ready()) {
 			mutex_lock(&g_dsp_lock);
 			ret = aw_send_afe_cal_apr(param_id, data,

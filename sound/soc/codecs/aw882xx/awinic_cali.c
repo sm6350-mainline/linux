@@ -38,53 +38,53 @@ static DEFINE_MUTEX(g_aw_dsp_msg_lock);
 #define AW_INT_DEC_DIGIT 10
 static int aw882xx_write_cali_re_to_file(int32_t cali_re, int channel)
 {
-	struct file *fp = NULL;
+	//struct file *fp = NULL;
 	char buf[50] = {0};
 	loff_t pos = 0;
-	mm_segment_t fs;
+	//mm_segment_t fs;
 
-	fp = filp_open(AWINIC_CALI_FILE, O_RDWR | O_CREAT, 0664);
-	if (IS_ERR(fp)) {
-		pr_err("%s:channel:%d open %s failed!\n",
-			__func__, channel, AWINIC_CALI_FILE);
-		return -EINVAL;
-	}
+	//fp = filp_open(AWINIC_CALI_FILE, O_RDWR | O_CREAT, 0664);
+	//if (IS_ERR(fp)) {
+	//	pr_err("%s:channel:%d open %s failed!\n",
+	//		__func__, channel, AWINIC_CALI_FILE);
+	//	return -EINVAL;
+	//}
 	if (channel == AW882XX_CHANNLE_RIGHT)
 		pos = AW_INT_DEC_DIGIT;
 
 	cali_re = FIXED_RE_TO_MOHM(cali_re);
 	snprintf(buf, sizeof(buf), "%10d", cali_re);
 
-	fs = get_fs();
-	set_fs(KERNEL_DS);
+	//fs = get_fs();
+	//set_fs(KERNEL_DS);
 
-	vfs_write(fp, buf, strlen(buf), &pos);
+	//vfs_write(fp, buf, strlen(buf), &pos);
 
-	set_fs(fs);
+	//set_fs(fs);
 
 	pr_info("%s: channel:%d buf:%s cali_re:%d\n",
 		__func__, channel, buf, cali_re);
 
-	filp_close(fp, NULL);
+	//filp_close(fp, NULL);
 	return 0;
 }
 
 static int aw882xx_get_cali_re_from_file(int32_t *cali_re, int channel)
 {
-	struct file *fp = NULL;
+	//struct file *fp = NULL;
 	/*struct inode *node;*/
 	int f_size;
 	char *buf = NULL;
 	int32_t int_cali_re = 0;
 	loff_t pos = 0;
-	mm_segment_t fs;
+	//mm_segment_t fs;
 
-	fp = filp_open(AWINIC_CALI_FILE, O_RDONLY, 0);
-	if (IS_ERR(fp)) {
-		pr_err("%s:channel:%d open %s failed!\n",
-			__func__, channel, AWINIC_CALI_FILE);
-		return -EINVAL;
-	}
+	//fp = filp_open(AWINIC_CALI_FILE, O_RDONLY, 0);
+	//if (IS_ERR(fp)) {
+	//	pr_err("%s:channel:%d open %s failed!\n",
+	//		__func__, channel, AWINIC_CALI_FILE);
+	//	return -EINVAL;
+	//}
 
 	if (channel == AW882XX_CHANNLE_RIGHT)
 		pos = AW_INT_DEC_DIGIT;
@@ -97,16 +97,16 @@ static int aw882xx_get_cali_re_from_file(int32_t *cali_re, int channel)
 	if (!buf) {
 		pr_err("%s: channel:%d malloc mem %d failed!\n",
 			__func__, channel, f_size);
-		filp_close(fp, NULL);
+		//filp_close(fp, NULL);
 		return -EINVAL;
 	}
 
-	fs = get_fs();
-	set_fs(KERNEL_DS);
+	//fs = get_fs();
+	//set_fs(KERNEL_DS);
 
-	vfs_read(fp, buf, f_size, &pos);
+	//vfs_read(fp, buf, f_size, &pos);
 
-	set_fs(fs);
+	//set_fs(fs);
 
 	if (sscanf(buf, "%d", &int_cali_re) == 1)
 		*cali_re = MOHM_TO_FIXED_RE(int_cali_re);
@@ -118,7 +118,7 @@ static int aw882xx_get_cali_re_from_file(int32_t *cali_re, int channel)
 
 	kfree(buf);
 	buf = NULL;
-	filp_close(fp, NULL);
+	//filp_close(fp, NULL);
 
 	return  0;
 
@@ -126,7 +126,7 @@ static int aw882xx_get_cali_re_from_file(int32_t *cali_re, int channel)
 #endif
 
  /*custom need add to set/get cali_re form/to nv*/
-int aw882xx_set_cali_re_to_nvram(int32_t cali_re, int32_t channel)
+static int aw882xx_set_cali_re_to_nvram(int32_t cali_re, int32_t channel)
 {
 	/*custom add, if success return value is 0, else -1*/
 #ifdef AW_CALI_STORE_EXAMPLE
@@ -135,7 +135,7 @@ int aw882xx_set_cali_re_to_nvram(int32_t cali_re, int32_t channel)
 	return -EBUSY;
 #endif
 }
-int aw882xx_get_cali_re_from_nvram(int32_t *cali_re, int32_t channel)
+static int aw882xx_get_cali_re_from_nvram(int32_t *cali_re, int32_t channel)
 {
 	/*custom add, if success return value is 0 , else -1*/
 #ifdef AW_CALI_STORE_EXAMPLE
@@ -474,7 +474,7 @@ mute_failed:
 static int R0_MAX = 15000;
 static int R0_MIN = 5000;
 
-int  aw_cali_range_open(struct inode *inode, struct file *file)
+static int  aw_cali_range_open(struct inode *inode, struct file *file)
 {
 	struct aw882xx *aw882xx = (struct aw882xx *)inode->i_private;
 
@@ -483,7 +483,7 @@ int  aw_cali_range_open(struct inode *inode, struct file *file)
 	return 0;
 }
 
-ssize_t aw_cali_range_read(struct file *file,
+static ssize_t aw_cali_range_read(struct file *file,
 	char __user *buf, size_t len, loff_t *ppos)
 {
 	int ret;
@@ -510,7 +510,7 @@ ssize_t aw_cali_range_read(struct file *file,
 	return ret;
 }
 
-ssize_t aw_cali_range_write(struct file *file,
+static ssize_t aw_cali_range_write(struct file *file,
 	const char __user *buf, size_t len, loff_t *ppos)
 {
 	struct aw882xx *aw882xx = (struct aw882xx *)file->private_data;
@@ -541,7 +541,7 @@ static const struct file_operations aw_cali_range_fops = {
 	.write = aw_cali_range_write,
 };
 
-int  aw_cali_open(struct inode *inode, struct file *file)
+static int  aw_cali_open(struct inode *inode, struct file *file)
 {
 	struct aw882xx *aw882xx = (struct aw882xx *)inode->i_private;
 
@@ -550,7 +550,7 @@ int  aw_cali_open(struct inode *inode, struct file *file)
 	return 0;
 }
 
-ssize_t aw_cali_read(struct file *file,
+static ssize_t aw_cali_read(struct file *file,
 	char __user *buf, size_t len, loff_t *ppos)
 {
 	int ret;
@@ -585,7 +585,7 @@ ssize_t aw_cali_read(struct file *file,
 	return simple_read_from_buffer(buf, len, ppos, ret_value, ret);
 }
 
-ssize_t aw_cali_write(struct file *file,
+static ssize_t aw_cali_write(struct file *file,
 	const char __user *buf, size_t len, loff_t *ppos)
 {
 
@@ -598,7 +598,7 @@ static const struct file_operations aw_cali_fops = {
 	.write = aw_cali_write,
 };
 
-int  aw_f0_open(struct inode *inode, struct file *file)
+static int  aw_f0_open(struct inode *inode, struct file *file)
 {
 	struct aw882xx *aw882xx = (struct aw882xx *)inode->i_private;
 
@@ -607,7 +607,7 @@ int  aw_f0_open(struct inode *inode, struct file *file)
 	return 0;
 }
 
-ssize_t aw_f0_read(struct file *file,
+static ssize_t aw_f0_read(struct file *file,
 	char __user *buf, size_t len, loff_t *ppos)
 {
 	int ret;
@@ -651,7 +651,7 @@ static const struct file_operations aw_f0_fops = {
 	.open = aw_f0_open,
 	.read = aw_f0_read,
 };
-int  aw_cali_status_open(struct inode *inode, struct file *file)
+static int  aw_cali_status_open(struct inode *inode, struct file *file)
 {
 	struct aw882xx *aw882xx = (struct aw882xx *)inode->i_private;
 
@@ -660,7 +660,7 @@ int  aw_cali_status_open(struct inode *inode, struct file *file)
 	return 0;
 }
 
-ssize_t aw_cali_status_read(struct file *file,
+static ssize_t aw_cali_status_read(struct file *file,
 	char __user *buf, size_t len, loff_t *ppos)
 {
 	int ret;
@@ -765,7 +765,7 @@ static void aw_cali_debugfs_init(struct aw882xx *aw882xx)
 	}
 }
 
-void aw_cali_debugfs_deinit(struct aw882xx *aw882xx)
+static void aw_cali_debugfs_deinit(struct aw882xx *aw882xx)
 {
 	struct aw_dbg_cali *dbg_fs = &aw882xx->cali.dbg_fs;
 
