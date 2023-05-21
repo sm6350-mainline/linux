@@ -1108,6 +1108,15 @@ config DRM_PANEL_SAMSUNG_SOFEF00
 
 	    Samsung AMS628NW01 (found in OnePlus 6, 1080x2280@60Hz)
 
+config DRM_PANEL_SAMSUNG_SOFEF01
+       tristate "Samsung sofef01 panels"
+       depends on OF
+       depends on DRM_MIPI_DSI
+       depends on BACKLIGHT_CLASS_DEVICE
+       select VIDEOMODE_HELPERS
+       help
+         Say Y or M here -- TODO
+
 config DRM_PANEL_SEIKO_43WVF1G
 	tristate "Seiko 43WVF1G panel"
 	depends on OF
