@@ -234,6 +234,28 @@
 			status = "disabled";
 		};
 
+		pm7250b_qgauge: battery@4800 {
+			compatible = "qcom,pm7250b-qg", "qcom,pm6150-qg";
+			reg = <0x4800>;
+
+			io-channels = <0>, /* to be provided by board */
+				      <&pm7250b_adc ADC5_BAT_ID_100K_PU>;
+			io-channel-names = "batt-therm",
+					   "batt-id";
+
+			nvmem = <&pm7250b_qg_sdam>;
+
+			status = "disabled";
+		};
+
+		pm7250b_qg_sdam: nvram@b100 {
+			compatible = "qcom,spmi-sdam";
+			reg = <0xb100>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0 0xb100 0x100>;
+		};
+
 		pm7250b_gpios: gpio@c000 {
 			compatible = "qcom,pm7250b-gpio", "qcom,spmi-gpio";
 			reg = <0xc000>;
