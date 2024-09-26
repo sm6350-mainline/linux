@@ -1264,6 +1264,15 @@
 	status = "okay";
 };
 
+&pm7250b_qgauge {
+	monitored-battery = <&battery>;
+
+	io-channels = <&bat_therm_sensor>,
+		      <&pm7250b_adc ADC5_BAT_ID_100K_PU>;
+
+	status = "okay";
+};
+
 &pm7250b_typec {
 	vdd-pdphy-supply = <&vreg_l3a>;
 
