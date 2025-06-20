@@ -42,6 +42,22 @@
 		serial1 = &uart1;
 	};
 
+	battery: battery {
+		compatible = "simple-battery";
+
+		device-chemistry = "lithium-ion-polymer";
+
+		charge-full-design-microamp-hours = <3905000>;
+		/*
+		 * Keep the maximum charging current conservative for now,
+		 * until we have thermal handling in the charging driver.
+		 * Downstream seems to have a upper limit of 3A.
+		 */
+		constant-charge-current-max-microamp = <1500000>;
+		voltage-max-design-microvolt = <4400000>;
+		voltage-min-design-microvolt = <3400000>;
+	};
+
 	chosen {
 		#address-cells = <2>;
 		#size-cells = <2>;
@@ -1157,6 +1173,12 @@
 		qcom,ratiometric;
 		qcom,hw-settle-time-us = <200>;
 	};
+};
+
+&pm7250b_charger {
+	monitored-battery = <&battery>;
+
+	status = "okay";
 };
 
 &pm7250b_typec {
