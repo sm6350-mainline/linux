@@ -39,86 +39,68 @@ to_samsung_sofef01_m(struct drm_panel *panel)
 static int samsung_sofef01_m_on(struct samsung_sofef01_m *ctx)
 {
 	struct mipi_dsi_device *dsi = ctx->dsi;
-	struct device *dev = &dsi->dev;
-	int ret;
+	struct mipi_dsi_multi_context dsi_ctx = { .dsi = dsi };
 
 	dsi->mode_flags |= MIPI_DSI_MODE_LPM;
 
-	ret = mipi_dsi_dcs_exit_sleep_mode(dsi);
-	if (ret < 0) {
-		dev_err(dev, "Failed to exit sleep mode: %d\n", ret);
-		return ret;
-	}
-	usleep_range(10000, 11000);
+	mipi_dsi_dcs_exit_sleep_mode_multi(&dsi_ctx);
+	mipi_dsi_usleep_range(&dsi_ctx, 10000, 11000);
 
-	ret = mipi_dsi_dcs_set_tear_on(dsi, MIPI_DSI_DCS_TEAR_MODE_VBLANK);
-	if (ret < 0) {
-		dev_err(dev, "Failed to set tear on: %d\n", ret);
-		return ret;
-	}
+	mipi_dsi_dcs_set_tear_on_multi(&dsi_ctx, MIPI_DSI_DCS_TEAR_MODE_VBLANK);
 
-	mipi_dsi_dcs_write_seq(dsi, 0xf0, 0x5a, 0x5a);
-	mipi_dsi_dcs_write_seq(dsi, 0xdf, 0x03);
-	mipi_dsi_dcs_write_seq(dsi, 0xe0, 0x01);
-	mipi_dsi_dcs_write_seq(dsi, 0xf0, 0xa5, 0xa5);
+	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xf0, 0x5a, 0x5a);
+	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xdf, 0x03);
+	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xe0, 0x01);
+	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xf0, 0xa5, 0xa5);
 
 	// PDX213:
-	mipi_dsi_dcs_write_seq(dsi, 0xf0, 0x5a, 0x5a);
-	mipi_dsi_dcs_write_seq(dsi, 0xfc, 0x5a, 0x5a);
-	mipi_dsi_dcs_write_seq(dsi, 0xE1, 0x00, 0x00, 0x02, 0x00, 0x1C, 0x1C,
+	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xf0, 0x5a, 0x5a);
+	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xfc, 0x5a, 0x5a);
+	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xE1, 0x00, 0x00, 0x02, 0x00, 0x1C, 0x1C,
 			       0x00, 0x00, 0x20, 0x00, 0x00, 0x01, 0x19);
-	mipi_dsi_dcs_write_seq(dsi, 0xfc, 0xa5, 0xa5);
-	mipi_dsi_dcs_write_seq(dsi, 0xf0, 0xa5, 0xa5);
+	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xfc, 0xa5, 0xa5);
+	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xf0, 0xa5, 0xa5);
 
 	// PDX225 stock:
 	// https://github.com/sonyxperiadev/kernel-copyleft-dts/blob/65.1.A.4.xxx/qcom/dsi-panel-samsung-amoled-fhd-cmd.dtsi#L61
-	// mipi_dsi_dcs_write_seq(dsi, 0xf0, 0x5a, 0x5a);
-	// mipi_dsi_dcs_write_seq(dsi, 0xb0, 0x27, 0xf2);
-	// mipi_dsi_dcs_write_seq(dsi, 0xb0, 0xf2, 0x80);
-	// mipi_dsi_dcs_write_seq(dsi, 0xb0, 0xf7, 0x07);
-	// mipi_dsi_dcs_write_seq(dsi, 0xf0, 0xa5, 0xa5);
+	// mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xf0, 0x5a, 0x5a);
+	// mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xb0, 0x27, 0xf2);
+	// mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xb0, 0xf2, 0x80);
+	// mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xb0, 0xf7, 0x07);
+	// mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xf0, 0xa5, 0xa5);
 
-	// mipi_dsi_dcs_write_seq(dsi, 0xf0, 0x5a, 0x5a);
-	// mipi_dsi_dcs_write_seq(dsi, 0xb0, 0x02, 0x8f);
-	// mipi_dsi_dcs_write_seq(dsi, 0x8f, 0x27, 0x05);
-	// mipi_dsi_dcs_write_seq(dsi, 0xf0, 0xa5, 0xa5);
+	// mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xf0, 0x5a, 0x5a);
+	// mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xb0, 0x02, 0x8f);
+	// mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0x8f, 0x27, 0x05);
+	// mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xf0, 0xa5, 0xa5);
 
-	// mipi_dsi_dcs_write_seq(dsi, 0xf0, 0x5a, 0x5a);
-	// mipi_dsi_dcs_write_seq(dsi, 0xb0, 0x92, 0x63);
-	// mipi_dsi_dcs_write_seq(dsi, 0x63, 0x05);
-	// mipi_dsi_dcs_write_seq(dsi, 0xf0, 0xa5, 0xa5);
+	// mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xf0, 0x5a, 0x5a);
+	// mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xb0, 0x92, 0x63);
+	// mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0x63, 0x05);
+	// mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xf0, 0xa5, 0xa5);
 
 	// TODO: This wasn't previously called but makes sense to be called now
-	ret = mipi_dsi_dcs_set_column_address(dsi, 0, 1080 - 1);
-	if (ret < 0) {
-		dev_err(dev, "Failed to set column address: %d\n", ret);
-		return ret;
-	}
-
-	ret = mipi_dsi_dcs_set_page_address(dsi, 0, 2520 - 1);
-	if (ret < 0) {
-		dev_err(dev, "Failed to set page address: %d\n", ret);
-		return ret;
-	}
+	mipi_dsi_dcs_set_column_address_multi(&dsi_ctx,0, 1080 - 1);
+	mipi_dsi_dcs_set_page_address_multi(&dsi_ctx, 0, 2520 - 1);
 
 	// PDX213:
 	mipi_dsi_dcs_set_display_brightness_large(dsi, 0x119);
 
-	mipi_dsi_dcs_write_seq(dsi, MIPI_DCS_WRITE_CONTROL_DISPLAY,
+	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, MIPI_DCS_WRITE_CONTROL_DISPLAY,
 			       WRITE_CONTROL_DISPLAY_BACKLIGHT);
-	mipi_dsi_dcs_write_seq(dsi, MIPI_DCS_WRITE_POWER_SAVE, 0x00);
-	mipi_dsi_dcs_write_seq(dsi, 0xf0, 0x5a, 0x5a);
-	// mipi_dsi_dcs_write_seq(dsi, 0xbe, 0x92, 0x29);
+	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, MIPI_DCS_WRITE_POWER_SAVE, 0x00);
+	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xf0, 0x5a, 0x5a);
+	// mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xbe, 0x92, 0x29);
 	// PDX213:
-	mipi_dsi_dcs_write_seq(dsi, 0xbe, 0x92, 0x09);
-	// mipi_dsi_dcs_write_seq(dsi, 0xf0, 0xa5, 0xa5);
-	// mipi_dsi_dcs_write_seq(dsi, 0xf0, 0x5a, 0x5a);
-	mipi_dsi_dcs_write_seq(dsi, 0xb0, 0x06);
-	mipi_dsi_dcs_write_seq(dsi, 0xb6, 0x90);
-	mipi_dsi_dcs_write_seq(dsi, 0xf0, 0xa5, 0xa5);
+	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xbe, 0x92, 0x09);
+	// mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xf0, 0xa5, 0xa5);
+	// mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xf0, 0x5a, 0x5a);
+	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xb0, 0x06);
+	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xb6, 0x90);
+	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xf0, 0xa5, 0xa5);
 	msleep(110);
 
-	return 0;
+	return dsi_ctx.accum_err;
 }
 
 static int samsung_sofef01_m_prepare(struct drm_panel *panel)
@@ -161,44 +143,27 @@ static int samsung_sofef01_m_enable(struct drm_panel *panel)
 {
 	struct samsung_sofef01_m *ctx = to_samsung_sofef01_m(panel);
 	struct mipi_dsi_device *dsi = ctx->dsi;
-	struct device *dev = &dsi->dev;
-	int ret;
+	struct mipi_dsi_multi_context dsi_ctx = { .dsi = dsi };
 
-	ret = mipi_dsi_dcs_set_display_on(dsi);
-	if (ret < 0) {
-		dev_err(dev, "Failed to turn display on: %d\n", ret);
-		return ret;
-	}
+	mipi_dsi_dcs_set_display_on_multi(&dsi_ctx);
 
-	return 0;
+	return dsi_ctx.accum_err;
 }
 
 static int samsung_sofef01_m_disable(struct drm_panel *panel)
 {
 	struct samsung_sofef01_m *ctx = to_samsung_sofef01_m(panel);
 	struct mipi_dsi_device *dsi = ctx->dsi;
-	struct device *dev = &dsi->dev;
-	int ret;
-
-	dev_err(dev, "%s\n", __func__);
+	struct mipi_dsi_multi_context dsi_ctx = { .dsi = dsi };
 
 	dsi->mode_flags &= ~MIPI_DSI_MODE_LPM;
 
-	ret = mipi_dsi_dcs_set_display_off(dsi);
-	if (ret < 0) {
-		dev_err(dev, "Failed to turn display off: %d\n", ret);
-		return ret;
-	}
-	msleep(20);
+	mipi_dsi_dcs_set_display_off_multi(&dsi_ctx);
+	mipi_dsi_msleep(&dsi_ctx, 20);
 
-	ret = mipi_dsi_dcs_enter_sleep_mode(dsi);
-	if (ret < 0) {
-		dev_err(dev, "Failed to enter sleep mode: %d\n", ret);
-		return ret;
-	}
-	msleep(120);
-
-	return 0;
+	mipi_dsi_dcs_enter_sleep_mode_multi(&dsi_ctx);
+	mipi_dsi_msleep(&dsi_ctx, 120);
+	return dsi_ctx.accum_err;
 }
 
 static int samsung_sofef01_m_unprepare(struct drm_panel *panel)
@@ -289,9 +254,11 @@ static int samsung_sofef01_m_probe(struct mipi_dsi_device *dsi)
 	struct samsung_sofef01_m *ctx;
 	int ret;
 
-	ctx = devm_kzalloc(dev, sizeof(*ctx), GFP_KERNEL);
-	if (!ctx)
-		return -ENOMEM;
+	ctx = devm_drm_panel_alloc(dev, __typeof(*ctx), panel,
+				   &samsung_sofef01_m_panel_funcs,
+				   DRM_MODE_CONNECTOR_DSI);
+	if (IS_ERR(ctx))
+		return PTR_ERR(ctx);
 
 	ctx->vddio = devm_regulator_get(dev, "vddio");
 	if (IS_ERR(ctx->vddio))
@@ -318,9 +285,6 @@ static int samsung_sofef01_m_probe(struct mipi_dsi_device *dsi)
 
 	ctx->panel.prepare_prev_first = true;
 
-	drm_panel_init(&ctx->panel, dev, &samsung_sofef01_m_panel_funcs,
-		       DRM_MODE_CONNECTOR_DSI);
-
 	ctx->panel.backlight = samsung_sofef01_m_create_backlight(dsi);
 	if (IS_ERR(ctx->panel.backlight))
 		return dev_err_probe(dev, PTR_ERR(ctx->panel.backlight),
@@ -334,6 +298,7 @@ static int samsung_sofef01_m_probe(struct mipi_dsi_device *dsi)
 		drm_panel_remove(&ctx->panel);
 		return ret;
 	}
+
 
 	return 0;
 }
