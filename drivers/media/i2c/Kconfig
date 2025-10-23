@@ -310,6 +310,17 @@ config VIDEO_IMX576
 	  To compile this driver as a module, choose M here: the
 	  module will be called imx576.
 
+config VIDEO_IMX582
+	tristate "Sony IMX582 sensor support"
+	depends on OF_GPIO
+	select V4L2_CCI_I2C
+	help
+	  This is a Video4Linux2 sensor driver for the Sony
+	  IMX582 camera.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called imx582.
+
 config VIDEO_IMX678
 	tristate "Sony IMX678 sensor support"
 	depends on GPIOLIB
