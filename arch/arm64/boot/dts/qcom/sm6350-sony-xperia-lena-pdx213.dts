@@ -332,6 +332,14 @@
 	};
 };
 
+&ipa {
+	memory-region = <&pil_ipa_fw_mem>;
+	firmware-name = "qcom/sm6350/sony/pdx213/ipa_fws.mbn";
+	qcom,gsi-loader = "self";
+
+	status = "okay";
+};
+
 &mdss {
 	status = "okay";
 };
