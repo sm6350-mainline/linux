@@ -15,6 +15,7 @@
 #include <dt-bindings/leds/common.h>
 #include <dt-bindings/pinctrl/qcom,pmic-gpio.h>
 #include <dt-bindings/regulator/qcom,rpmh-regulator.h>
+#include <dt-bindings/usb/pd.h>
 #include "sm6350.dtsi"
 #include "pm6150l.dtsi"
 #include "pm6350.dtsi"
@@ -30,6 +31,22 @@
 
 	aliases {
 		serial1 = &uart1;
+	};
+
+	battery: battery {
+		compatible = "simple-battery";
+
+		device-chemistry = "lithium-ion-polymer";
+
+		charge-full-design-microamp-hours = <4529000>;
+		/*
+		 * Keep the maximum charging current conservative for now,
+		 * until we have thermal handling in the charging driver.
+		 * Downstream seems to have a upper limit of 3A.
+		 */
+		constant-charge-current-max-microamp = <1500000>;
+		voltage-max-design-microvolt = <4420000>;
+		voltage-min-design-microvolt = <3200000>;
 	};
 
 	chosen {
@@ -66,6 +83,89 @@
 		regulator-max-microvolt = <5500000>;
 		regulator-always-on;
 		regulator-boot-on;
+	};
+
+	bat_therm_sensor: thermal-sensor-bat-therm {
+		compatible = "generic-adc-thermal";
+		#thermal-sensor-cells = <0>;
+		#io-channel-cells = <0>;
+		io-channels = <&pm7250b_adc ADC5_BAT_THERM_30K_PU>;
+		io-channel-names = "sensor-channel";
+		/*
+		 * Voltage to temperature table for 100kΩ (B=4250K) NTC with a
+		 * 1.875V reference and 30kΩ pull-up.
+		 */
+		temperature-lookup-table = <
+			(-40000) 1840
+			(-38000) 1835
+			(-36000) 1828
+			(-34000) 1821
+			(-32000) 1813
+			(-30000) 1803
+			(-28000) 1793
+			(-26000) 1781
+			(-24000) 1768
+			(-22000) 1753
+			(-20000) 1737
+			(-18000) 1719
+			(-16000) 1700
+			(-14000) 1679
+			(-12000) 1655
+			(-10000) 1630
+			(-8000) 1603
+			(-6000) 1574
+			(-4000) 1543
+			(-2000) 1510
+			0 1475
+			2000 1438
+			4000 1400
+			6000 1360
+			8000 1318
+			10000 1276
+			12000 1232
+			14000 1187
+			16000 1142
+			18000 1097
+			20000 1051
+			22000 1005
+			24000 960
+			26000 915
+			28000 871
+			30000 828
+			32000 786
+			34000 745
+			36000 705
+			38000 666
+			40000 629
+			42000 594
+			44000 560
+			46000 527
+			48000 497
+			50000 467
+			52000 439
+			54000 413
+			56000 388
+			58000 365
+			60000 343
+			62000 322
+			64000 302
+			66000 284
+			68000 267
+			70000 251
+			72000 235
+			74000 221
+			76000 208
+			78000 195
+			80000 184
+			82000 173
+			84000 163
+			86000 153
+			88000 144
+			90000 136
+			92000 128
+			94000 120
+			96000 114
+			98000 107>;
 	};
 
 	touch_en_vreg: touch-en-regulator {
@@ -476,6 +576,76 @@
 	};
 };
 
+&pm7250b_charger {
+	monitored-battery = <&battery>;
+
+	status = "okay";
+};
+
+&pm7250b_qgauge {
+	monitored-battery = <&battery>;
+
+	io-channels = <&bat_therm_sensor>,
+			<&pm7250b_adc ADC5_BAT_ID_100K_PU>;
+
+	status = "okay";
+};
+
+&pm7250b_typec {
+	vdd-pdphy-supply = <&pm6350_l3>;
+
+	status = "okay";
+
+	connector {
+		compatible = "usb-c-connector";
+
+		power-role = "dual";
+		data-role = "dual";
+		self-powered;
+
+		/* 5V @ 0.5A */
+		source-pdos = <PDO_FIXED(5000, 500,
+					PDO_FIXED_DUAL_ROLE |
+					PDO_FIXED_USB_COMM |
+					PDO_FIXED_DATA_SWAP)>;
+
+		/*
+		 * The sink should also support 9V @ 1.5A and 10V @ 1.5A but we
+		 * need charger support first for this to make sense.
+		 *
+		 *   PDO_FIXED(9000, 1500, 0)
+		 *   PDO_FIXED(10000, 1500, 0)
+		 */
+		sink-pdos = <PDO_FIXED(5000, 2000,
+					PDO_FIXED_DUAL_ROLE |
+					PDO_FIXED_USB_COMM |
+					PDO_FIXED_DATA_SWAP)>;
+
+		op-sink-microwatt = <2500000>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+
+				pm7250b_hs_in: endpoint {
+					remote-endpoint = <&usb_1_dwc3_hs_out>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+
+				pm7250b_ss_in: endpoint {
+					remote-endpoint = <&usb_1_qmpphy_out>;
+				};
+			};
+		};
+	};
+};
+
 &pm7250b_vbus {
 	regulator-min-microamp = <500000>;
 	regulator-max-microamp = <1500000>;
@@ -679,6 +849,10 @@
 	dr_mode = "peripheral";
 };
 
+&usb_1_dwc3_hs_out {
+	remote-endpoint = <&pm7250b_hs_in>;
+};
+
 &usb_1_hsphy {
 	vdd-supply = <&pm6350_l18>;
 	vdda-phy-dpdm-supply = <&pm6350_l3>;
@@ -692,6 +866,10 @@
 	vdda-pll-supply = <&pm6350_l22>;
 
 	status = "okay";
+};
+
+&usb_1_qmpphy_out {
+	remote-endpoint = <&pm7250b_ss_in>;
 };
 
 &wifi {
