@@ -449,6 +449,10 @@
 };
 
 &tlmm {
+	/*
+	 * 13-16: Egis ET520 fingerprint sensor
+	 * 56-57: TZ-protected pins
+	 */
 	gpio-reserved-ranges = <13 4>, <56 2>;
 
 	te_gpio: te-default-state {
@@ -464,6 +468,9 @@
 };
 
 &ufs_mem_phy {
+	vdda-phy-supply = <&vreg_l18a>;
+	vdda-pll-supply = <&vreg_l22a>;
+
 	status = "okay";
 };
 
@@ -477,9 +484,16 @@
 };
 
 &usb_1_hsphy {
+	vdd-supply = <&vreg_l18a>;
+	vdda-pll-supply = <&vreg_l2a>;
+	vdda-phy-dpdm-supply = <&vreg_l3a>;
+
 	status = "okay";
 };
 
 &usb_1_qmpphy {
+	vdda-phy-supply = <&vreg_l22a>;
+	vdda-pll-supply = <&vreg_l16a>;
+
 	status = "okay";
 };
