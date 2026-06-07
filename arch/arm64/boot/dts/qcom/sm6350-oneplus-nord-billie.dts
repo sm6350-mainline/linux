@@ -21,15 +21,6 @@
 	qcom,msm-id = <434 0x10000>, <459 0x10000>;
 	qcom,board-id = <0x1000b 0>;
 
-	lcdb_dummy: regulator-lcdb-dummy {
-		compatible = "regulator-fixed";
-		regulator-name = "lcdb_dummy";
-		regulator-min-microvolt = <5500000>;
-		regulator-max-microvolt = <5500000>;
-		regulator-always-on;
-		regulator-boot-on;
-	};
-
 	chosen {
 		#address-cells = <2>;
 		#size-cells = <2>;
@@ -47,10 +38,19 @@
 		};
 	};
 
+	lcdb_dummy: regulator-lcdb-dummy {
+		compatible = "regulator-fixed";
+		regulator-name = "lcdb_dummy";
+		regulator-min-microvolt = <5500000>;
+		regulator-max-microvolt = <5500000>;
+		regulator-always-on;
+		regulator-boot-on;
+	};
+
 	gpio-keys {
 		compatible = "gpio-keys";
-		pinctrl-names = "default";
 		pinctrl-0 = <&key_vol_down_default>;
+		pinctrl-names = "default";
 
 		key-volume-down {
 			label = "Volume Down";
@@ -342,16 +342,12 @@
 	};
 };
 
-&dispcc {
-	status = "okay";
-};
-
 &gpu {
 	status = "okay";
 };
 
 &gpu_zap_shader {
-	firmware-name = "qcom/sm6350/billie/a615_zap.mbn";
+	firmware-name = "qcom/sm6350/Oneplus/billie/a615_zap.mbn";
 };
 
 &gpi_dma0 {
@@ -371,7 +367,7 @@
 
 	status = "okay";
 
-	dsi_panel: panel@0 {
+	panel@0 {
 		compatible = "tianma,hx83112f-fhd";
 		reg = <0>;
 
@@ -382,8 +378,8 @@
 		vsp-supply = <&lcdb_dummy>;
 		vsn-supply = <&lcdb_dummy>;
 
-		pinctrl-names = "default";
 		pinctrl-0 = <&panel_reset_pin &te_gpio>;
+		pinctrl-names = "default";
 
 		port {
 			panel_in: endpoint {
@@ -434,6 +430,7 @@
 
 &pm6350_resin {
 	linux,code = <KEY_VOLUMEUP>;
+
 	status = "okay";
 };
 
@@ -446,9 +443,9 @@
 };
 
 &sdhc_2 {
-	status = "okay";
-
 	cd-gpios = <&tlmm 94 GPIO_ACTIVE_HIGH>;
+
+	status = "okay";
 };
 
 &tlmm {
@@ -475,8 +472,8 @@
 };
 
 &usb_1_dwc3 {
-	maximum-speed = "super-speed";
 	dr_mode = "otg";
+	maximum-speed = "super-speed";
 };
 
 &usb_1_hsphy {
