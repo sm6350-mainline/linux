@@ -203,6 +203,16 @@ config DRM_PANEL_HIMAX_HX83112B
 	  Say Y here if you want to enable support for Himax HX83112B-based
 	  display panels, such as the one found in the Fairphone 3 smartphone.
 
+config DRM_PANEL_HIMAX_HX83112F
+	tristate "Himax HX83112F-based DSI panel"
+	depends on OF
+	depends on DRM_MIPI_DSI
+	depends on BACKLIGHT_CLASS_DEVICE
+	select DRM_KMS_HELPER
+	help
+	  Say Y here if you want to enable support for Himax HX83112F-based
+	  display panels, such as the one found in the OnePlus Nord N10 smartphone.
+
 config DRM_PANEL_HIMAX_HX8394
 	tristate "HIMAX HX8394 MIPI-DSI LCD panels"
 	depends on OF

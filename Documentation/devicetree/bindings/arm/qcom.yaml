@@ -955,6 +955,7 @@ properties:
 
       - items:
           - enum:
+              - oneplus,billie
               - sony,pdx213
           - const: qcom,sm6350
 

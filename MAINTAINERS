@@ -7872,6 +7872,12 @@ S:	Maintained
 T:	git https://gitlab.freedesktop.org/drm/misc/kernel.git
 F:	drivers/gpu/drm/tiny/gm12u320.c
 
+DRM DRIVER FOR TIANMA HIMAX83112F LCD panels
+M:	Saalim Quadri <danascape@gmail.com>
+S:	Maintained
+F:	Documentation/devicetree/bindings/display/panel/himax,hx83112f.yaml
+F:	drivers/gpu/drm/panel/panel-himax-hx83112f.c
+
 DRM DRIVER FOR HIMAX HX8394 MIPI-DSI LCD panels
 M:	Ondrej Jirman <megi@xff.cz>
 M:	Javier Martinez Canillas <javierm@redhat.com>
