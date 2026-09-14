@@ -20,6 +20,13 @@
 #include "pm7250b.dtsi"
 #include "pmk8350.dtsi"
 
+/delete-node/ &pil_adsp_mem;
+/delete-node/ &pil_camera_mem;
+/delete-node/ &pil_npu_mem;
+/delete-node/ &pil_video_mem;
+/delete-node/ &pil_cdsp_mem;
+/delete-node/ &ramoops;
+
 / {
 	model = "Samsung Galaxy Tab S7 FE LTE";
 	compatible = "samsung,gts7xllite", "qcom,sm7225";
@@ -75,7 +82,42 @@
 			qcom,client-id = <1>;
 			qcom,vmid = <QCOM_SCM_VMID_MSS_MSA>;
 		};
+		// ADSP firmware needs 64mb in gts7xllite. So overriding
+		pil_adsp_mem: memory@84800000 {
+			reg = <0x0 0x84800000 0x0 0x4000000>;
+			no-map;
+		};
+		pil_camera_mem: memory@88800000 {
+			reg = <0x0 0x88800000 0x0 0x500000>;
+			no-map;
+		};
+		pil_cdsp_mem: memory@89700000 {
+			reg = <0x0 0x89700000 0x0 0x1e00000>;
+			no-map;
+		};
+		pil_npu_mem: memory@88d00000 {
+			reg = <0x0 0x88d00000 0x0 0x500000>;
+			no-map;
+		};
+
+		pil_video_mem: memory@89200000 {
+			reg = <0x0 0x89200000 0x0 0x500000>;
+			no-map;
+		};
+		ramoops@b1b00000 {
+			compatible = "ramoops";
+			reg = <0x0 0xb1b00000 0x0 0x100000>;
+			record-size = <0x40000>;
+			console-size = <0x40000>;
+			ftrace-size = <0x40000>;
+			pmsg-size = <0x40000>;
+		};
 	};
+};
+
+&adsp {
+	firmware-name = "qcom/sm7225/samsung-gts7xllite/adsp.mbn";
+	status = "okay";
 };
 
 &apps_rsc {
@@ -330,6 +372,11 @@
 			regulator-allow-bypass;
 		};
 	};
+};
+
+&cdsp {
+	firmware-name = "qcom/sm7225/samsung-gts7xllite/cdsp.mbn";
+	status = "okay";
 };
 
 &dispcc {
