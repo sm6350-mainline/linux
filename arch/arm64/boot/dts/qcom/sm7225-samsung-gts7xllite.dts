@@ -47,9 +47,9 @@
 
 		stdout-path = "framebuffer0";
 
-		framebuffer0: framebuffer@a0000000 {
+		framebuffer0: framebuffer {
 			compatible = "simple-framebuffer";
-			reg = <0 0xa0000000 0 (2560 * 1600 * 4)>;
+			memory-region = <&framebuffer_mem>;
 			width = <1600>;
 			height = <2560>;
 			stride = <(1600 * 4)>;
