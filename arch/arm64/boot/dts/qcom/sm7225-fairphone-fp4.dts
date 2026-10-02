@@ -910,43 +910,19 @@
 	/* ST21NFCD NFC @ 8 */
 	/* VL53L3 ToF @ 29 */
 
-	aw882xx_l: aw882xx_smartpa@34 {
-		compatible = "awinic,aw882xx_smartpa";
+	speaker_codec_l: audio-codec@34 {
+		compatible = "awinic,aw88264";
 		reg = <0x34>;
-		reset-gpio = <&tlmm 12 0>;
-		irq-gpio = <&tlmm 48 0x2008>;
-		monitor-flag = <1>;
-		sync-flag = <0>;
-		monitor-timer-val = <3000>;
-		aw-cali-mode = "aw_misc";
-		sound-channel = "left";
-		aw-stereo-cali;
-		pinctrl-names = "aw_reset_low",
-			"aw_reset_high",
-			"aw_irq_active";
-		pinctrl-0 = <&aw_reset1_low>;
-		pinctrl-1 = <&aw_reset1_high>;
-		pinctrl-2 = <&aw_int1_low>;
+		reset-gpios = <&tlmm 12 GPIO_ACTIVE_LOW>;
+		sound-name-prefix = "Left";
 		#sound-dai-cells = <0>;
 	};
 
-	aw882xx_r: aw882xx_smartpa@35 {
-		compatible = "awinic,aw882xx_smartpa";
+	speaker_codec_r: audio-codec@35 {
+		compatible = "awinic,aw88264";
 		reg = <0x35>;
-		reset-gpio = <&tlmm 47 0>;
-		irq-gpio = <&tlmm 11 0x2008>;
-		monitor-flag = <1>;
-		sync-flag = <0>;
-		monitor-timer-val = <3000>;
-		aw-cali-mode = "aw_misc";
-		sound-channel = "right";
-		aw-stereo-cali;
-		pinctrl-names = "aw_reset_low",
-			"aw_reset_high",
-			"aw_irq_active";
-		pinctrl-0 = <&aw_reset2_low>;
-		pinctrl-1 = <&aw_reset2_high>;
-		pinctrl-2 = <&aw_int2_low>;
+		reset-gpios = <&tlmm 47 GPIO_ACTIVE_LOW>;
+		sound-name-prefix = "Right";
 		#sound-dai-cells = <0>;
 	};
 };
@@ -1532,7 +1508,7 @@
 		};
 
 		codec {
-			sound-dai = <&aw882xx_l>, <&aw882xx_r>;
+			sound-dai = <&speaker_codec_l>, <&speaker_codec_r>;
 		};
 	};
 };
@@ -1631,53 +1607,13 @@
 	};
 
 	aw-reset-int1-state {
-		aw_reset1_low: reset-low-pins {
-			pins = "gpio12";
-			function = "gpio";
-			drive-strength = <2>;
-			bias-disable;
-			output-low;
-		};
 
-		aw_reset1_high: reset-high-pins {
-			pins = "gpio12";
-			function = "gpio";
-			drive-strength = <2>;
-			bias-disable;
-			output-high;
-		};
 
-		aw_int1_low: int-low-pins {
-			pins = "gpio48";
-			function = "gpio";
-			drive-strength = <2>;
-			bias-pull-down;
-		};
 	};
 
 	aw-reset-int2-state {
-		aw_reset2_low: reset-low-pins {
-			pins = "gpio47";
-			function = "gpio";
-			drive-strength = <2>;
-			bias-disable;
-			output-low;
-		};
 
-		aw_reset2_high: reset-high-pins {
-			pins = "gpio47";
-			function = "gpio";
-			drive-strength = <2>;
-			bias-disable;
-			output-high;
-		};
 
-		aw_int2_low: int-low-pins {
-			pins = "gpio11";
-			function = "gpio";
-			drive-strength = <2>;
-			bias-pull-down;
-		};
 	};
 };
 
