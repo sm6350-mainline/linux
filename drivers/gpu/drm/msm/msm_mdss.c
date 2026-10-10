@@ -369,10 +369,6 @@ static struct msm_mdss *msm_mdss_init(struct platform_device *pdev, bool is_mdp5
 	int ret;
 	int irq;
 
-	ret = msm_mdss_reset(&pdev->dev);
-	if (ret)
-		return ERR_PTR(ret);
-
 	msm_mdss = devm_kzalloc(&pdev->dev, sizeof(*msm_mdss), GFP_KERNEL);
 	if (!msm_mdss)
 		return ERR_PTR(-ENOMEM);
@@ -407,6 +403,22 @@ static struct msm_mdss *msm_mdss_init(struct platform_device *pdev, bool is_mdp5
 	}
 	msm_mdss->num_clocks = ret;
 	msm_mdss->is_mdp5 = is_mdp5;
+
+	/*
+	 * The bootloader may leave the MDSS scanning out a splash. Asserting
+	 * the core reset in that state can hang the SoC, so first stop the
+	 * timing engines (clocks on, to reach the registers), then gate the
+	 * core and bus clocks so nothing is in flight, and only then reset.
+	 */
+	ret = clk_bulk_prepare_enable(msm_mdss->num_clocks, msm_mdss->clocks);
+	if (ret)
+		return ERR_PTR(ret);
+	if (!is_mdp5)
+		dpu_quiesce_bootloader_scanout(&pdev->dev);
+	clk_bulk_disable_unprepare(msm_mdss->num_clocks, msm_mdss->clocks);
+	ret = msm_mdss_reset(&pdev->dev);
+	if (ret)
+		return ERR_PTR(ret);
 
 	msm_mdss->dev = &pdev->dev;
 
