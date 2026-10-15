@@ -10,10 +10,13 @@
 #include <linux/i2c.h>
 #include <linux/gpio/consumer.h>
 #include <linux/acpi.h>
+#include <linux/clk.h>
 #include <linux/interrupt.h>
 #include <linux/delay.h>
 #include <linux/nfc.h>
 #include <linux/of.h>
+#include <linux/property.h>
+#include <linux/regulator/consumer.h>
 
 #include "st-nci.h"
 
@@ -22,9 +25,17 @@
 /* ndlc header */
 #define ST_NCI_FRAME_HEADROOM 1
 #define ST_NCI_FRAME_TAILROOM 0
+#define ST_NCI_RAW_FRAME_HEADROOM 0
 
 #define ST_NCI_I2C_MIN_SIZE 4   /* PCB(1) + NCI Packet header(3) */
+#define ST_NCI_NCI_HDR_SIZE 3   /* raw NCI: MT/PBF/GID + OID + len */
+#define ST_NCI_IDLE_BYTE 0x7e /* first read byte when the controller is idle (observed) */
 #define ST_NCI_I2C_MAX_SIZE 250 /* req 4.2.1 */
+
+enum st_nci_i2c_proto {
+	ST_NCI_I2C_PROTO_NDLC = 0,
+	ST_NCI_I2C_PROTO_RAW_NCI,
+};
 
 #define ST_NCI_DRIVER_NAME "st_nci"
 #define ST_NCI_I2C_DRIVER_NAME "st_nci_i2c"
@@ -34,7 +45,9 @@ struct st_nci_i2c_phy {
 	struct llt_ndlc *ndlc;
 
 	bool irq_active;
+	bool raw_nci;
 
+	struct clk *clk;
 	struct gpio_desc *gpiod_reset;
 
 	struct st_nci_se_status se_status;
@@ -44,9 +57,34 @@ static int st_nci_i2c_enable(void *phy_id)
 {
 	struct st_nci_i2c_phy *phy = phy_id;
 
-	gpiod_set_value(phy->gpiod_reset, 0);
+	/*
+	 * Existing DTS uses GPIO_ACTIVE_HIGH and treats logical 1 as
+	 * chip-running. GPIO_ACTIVE_LOW: logical 1 asserts reset
+	 * (physical LOW).
+	 */
+	if (gpiod_is_active_low(phy->gpiod_reset))
+		gpiod_set_value(phy->gpiod_reset, 1);
+	else
+		gpiod_set_value(phy->gpiod_reset, 0);
+
+	/*
+	 * The ST21NFCD (raw NCI) stops answering NCI after a poll on/off cycle
+	 * and does not recover on a reset pulse alone: its input clock has to be
+	 * stopped and restarted. The clock is enabled once at probe, so cycle it
+	 * here, while the controller is held in reset, on every power-up. Scoped
+	 * to the raw-NCI part; the NDLC parts keep their previous timing. The
+	 * usleep below is the reset-assert width and stays unconditional.
+	 */
+	if (phy->raw_nci)
+		clk_disable_unprepare(phy->clk);
 	usleep_range(10000, 15000);
-	gpiod_set_value(phy->gpiod_reset, 1);
+	if (phy->raw_nci)
+		clk_prepare_enable(phy->clk);
+
+	if (gpiod_is_active_low(phy->gpiod_reset))
+		gpiod_set_value(phy->gpiod_reset, 0);
+	else
+		gpiod_set_value(phy->gpiod_reset, 1);
 	usleep_range(80000, 85000);
 
 	if (phy->ndlc->powered == 0 && phy->irq_active == 0) {
@@ -111,6 +149,51 @@ static int st_nci_i2c_read(struct st_nci_i2c_phy *phy,
 	u8 buf[ST_NCI_I2C_MAX_SIZE];
 	struct i2c_client *client = phy->i2c_dev;
 
+	if (phy->raw_nci) {
+		r = i2c_master_recv(client, buf, ST_NCI_NCI_HDR_SIZE);
+		if (r < 0) {
+			usleep_range(1000, 4000);
+			r = i2c_master_recv(client, buf, ST_NCI_NCI_HDR_SIZE);
+		}
+		if (r != ST_NCI_NCI_HDR_SIZE)
+			return -EREMOTEIO;
+
+		/*
+		 * The controller returns 0x7e as the first byte when it has
+		 * nothing to send; its IRQ can assert without a frame behind it.
+		 * Treat that as no-data, otherwise buf[2] is taken as a length and
+		 * the next real frame is read off the bus at the wrong offset.
+		 */
+		if (buf[0] == ST_NCI_IDLE_BYTE)
+			return -ENODATA;
+
+		len = buf[2];
+		if (len > ST_NCI_I2C_MAX_SIZE) {
+			nfc_err(&client->dev, "invalid frame len\n");
+			return -EBADMSG;
+		}
+
+		*skb = alloc_skb(ST_NCI_NCI_HDR_SIZE + len, GFP_KERNEL);
+		if (!*skb)
+			return -ENOMEM;
+
+		skb_put(*skb, ST_NCI_NCI_HDR_SIZE);
+		memcpy((*skb)->data, buf, ST_NCI_NCI_HDR_SIZE);
+
+		if (!len)
+			return 0;
+
+		r = i2c_master_recv(client, buf, len);
+		if (r != len) {
+			kfree_skb(*skb);
+			return -EREMOTEIO;
+		}
+
+		skb_put(*skb, len);
+		memcpy((*skb)->data + ST_NCI_NCI_HDR_SIZE, buf, len);
+		return 0;
+	}
+
 	r = i2c_master_recv(client, buf, ST_NCI_I2C_MIN_SIZE);
 	if (r < 0) {  /* Retry, chip was in standby */
 		usleep_range(1000, 4000);
@@ -174,7 +257,7 @@ static irqreturn_t st_nci_irq_thread_fn(int irq, void *phy_id)
 	}
 
 	r = st_nci_i2c_read(phy, &skb);
-	if (r == -EREMOTEIO || r == -ENOMEM || r == -EBADMSG)
+	if (r == -EREMOTEIO || r == -ENOMEM || r == -EBADMSG || r == -ENODATA)
 		return IRQ_HANDLED;
 
 	ndlc_recv(phy->ndlc, skb);
@@ -211,12 +294,23 @@ static int st_nci_i2c_probe(struct i2c_client *client)
 		return -ENOMEM;
 
 	phy->i2c_dev = client;
+	phy->raw_nci = (uintptr_t)device_get_match_data(dev) ==
+			ST_NCI_I2C_PROTO_RAW_NCI;
 
 	i2c_set_clientdata(client, phy);
 
 	r = devm_acpi_dev_add_driver_gpios(dev, acpi_st_nci_gpios);
 	if (r)
 		dev_dbg(dev, "Unable to add GPIO mapping table\n");
+
+	r = devm_regulator_get_enable_optional(dev, "vdd-io");
+	if (r && r != -ENODEV)
+		return dev_err_probe(dev, r, "failed to enable vdd-io\n");
+
+	phy->clk = devm_clk_get_optional_enabled(dev, NULL);
+	if (IS_ERR(phy->clk))
+		return dev_err_probe(dev, PTR_ERR(phy->clk),
+				     "failed to enable clock\n");
 
 	/* Get RESET GPIO */
 	phy->gpiod_reset = devm_gpiod_get(dev, "reset", GPIOD_OUT_HIGH);
@@ -231,8 +325,10 @@ static int st_nci_i2c_probe(struct i2c_client *client)
 				device_property_read_bool(dev, "uicc-present");
 
 	r = ndlc_probe(phy, &i2c_phy_ops, &client->dev,
-			ST_NCI_FRAME_HEADROOM, ST_NCI_FRAME_TAILROOM,
-			&phy->ndlc, &phy->se_status);
+			phy->raw_nci ? ST_NCI_RAW_FRAME_HEADROOM :
+				       ST_NCI_FRAME_HEADROOM,
+			ST_NCI_FRAME_TAILROOM,
+			&phy->ndlc, &phy->se_status, phy->raw_nci);
 	if (r < 0) {
 		nfc_err(&client->dev, "Unable to register ndlc layer\n");
 		return r;
@@ -273,6 +369,8 @@ static const struct of_device_id of_st_nci_i2c_match[] __maybe_unused = {
 	{ .compatible = "st,st21nfcb-i2c", },
 	{ .compatible = "st,st21nfcb_i2c", },
 	{ .compatible = "st,st21nfcc-i2c", },
+	{ .compatible = "st,st21nfcd",
+	  .data = (void *)ST_NCI_I2C_PROTO_RAW_NCI },
 	{}
 };
 MODULE_DEVICE_TABLE(of, of_st_nci_i2c_match);

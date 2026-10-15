@@ -907,7 +907,15 @@
 	clock-frequency = <400000>;
 	status = "okay";
 
-	/* ST21NFCD NFC @ 8 */
+	nfc@8 {
+		compatible = "st,st21nfcd";
+		reg = <0x08>;
+
+		interrupts-extended = <&tlmm 9 IRQ_TYPE_LEVEL_HIGH>;
+
+		reset-gpios = <&tlmm 6 GPIO_ACTIVE_LOW>;
+		clocks = <&rpmhcc RPMH_LN_BB_CLK3>;
+	};
 	/* VL53L3 ToF @ 29 */
 
 	aw882xx_l: aw882xx_smartpa@34 {
