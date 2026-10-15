@@ -11,6 +11,7 @@
 
 #include <linux/debugfs.h>
 #include <linux/dma-buf.h>
+#include <linux/of_address.h>
 #include <linux/of_irq.h>
 #include <linux/pm_opp.h>
 
@@ -1517,6 +1518,104 @@ static const struct of_device_id dpu_dt_match[] = {
 	{}
 };
 MODULE_DEVICE_TABLE(of, dpu_dt_match);
+
+/* Register offsets, as in dpu_hw_intf.c and dpu_hw_ctl.c */
+#define DPU_INTF_TIMING_ENGINE_EN	0x000
+#define DPU_INTF_FRAME_COUNT		0x0ac
+#define DPU_CTL_INTF_ACTIVE		0x0f4
+
+/**
+ * dpu_quiesce_bootloader_scanout() - stop timing engines left on by firmware
+ * @mdss_dev: the MDSS device whose DPU child is to be quiesced
+ *
+ * A bootloader showing a splash leaves a video-mode interface scanning out a
+ * framebuffer, so the MDP keeps fetching from DDR. Asserting the MDSS core
+ * reset while such a fetch is in flight can wedge the interconnect and hang
+ * the whole SoC. Disable the running timing engines first and wait for the
+ * disable to latch at a frame boundary (as the video encoder's own disable
+ * path does), so the reset lands on an idle MDP.
+ *
+ * Only interfaces a CTL reports active are touched: an active interface is
+ * clocked, while an unused one (e.g. DP with its link clocks off) may not be
+ * safe to access at all. That needs the active-CTL register, DPU 5.0+.
+ *
+ * The caller must have the MDSS clocks enabled.
+ */
+void dpu_quiesce_bootloader_scanout(struct device *mdss_dev)
+{
+	const struct of_device_id *match = NULL;
+	const struct dpu_mdss_cfg *cfg;
+	struct device_node *np;
+	void __iomem *mmio;
+	u32 active = 0, fc_before[INTF_MAX] = {};
+	bool running[INTF_MAX] = {};
+	bool stopped = false;
+	int i, idx;
+
+	for_each_available_child_of_node(mdss_dev->of_node, np) {
+		match = of_match_node(dpu_dt_match, np);
+		if (match)
+			break;
+	}
+	if (!match)
+		return;
+
+	cfg = match->data;
+	if (cfg->mdss_ver->core_major_ver < 5) {
+		of_node_put(np);
+		return;
+	}
+
+	idx = of_property_match_string(np, "reg-names", "mdp");
+	mmio = of_iomap(np, idx < 0 ? 0 : idx);
+	of_node_put(np);
+	if (!mmio)
+		return;
+
+	for (i = 0; i < cfg->ctl_count; i++)
+		active |= readl_relaxed(mmio + cfg->ctl[i].base + DPU_CTL_INTF_ACTIVE);
+
+	for (i = 0; i < cfg->intf_count; i++) {
+		const struct dpu_intf_cfg *ic = &cfg->intf[i];
+		void __iomem *intf = mmio + ic->base;
+		int n = ic->id - INTF_0;
+
+		if (n < 0 || n >= INTF_MAX || !(active & BIT(n)))
+			continue;
+		if (!(readl_relaxed(intf + DPU_INTF_TIMING_ENGINE_EN) & BIT(0)))
+			continue;
+		running[n] = true;
+		fc_before[n] = readl_relaxed(intf + DPU_INTF_FRAME_COUNT);
+		writel_relaxed(0, intf + DPU_INTF_TIMING_ENGINE_EN);
+		stopped = true;
+	}
+
+	if (stopped) {
+		/*
+		 * Post the disables before waiting; two frames at 30 Hz, as the
+		 * disable latches at the next vsync.
+		 */
+		wmb();
+		msleep(70);
+		for (i = 0; i < cfg->intf_count; i++) {
+			const struct dpu_intf_cfg *ic = &cfg->intf[i];
+			void __iomem *intf = mmio + ic->base;
+			int n = ic->id - INTF_0;
+			u32 fc1, fc2;
+
+			if (n < 0 || n >= INTF_MAX || !running[n])
+				continue;
+			fc1 = readl_relaxed(intf + DPU_INTF_FRAME_COUNT);
+			msleep(20);
+			fc2 = readl_relaxed(intf + DPU_INTF_FRAME_COUNT);
+			dev_dbg(mdss_dev, "stopped bootloader scanout on %s (frame count %u -> %u, %s)\n",
+				ic->name, fc_before[n], fc2,
+				fc1 == fc2 ? "idle" : "STILL RUNNING");
+		}
+	}
+
+	iounmap(mmio);
+}
 
 static struct platform_driver dpu_driver = {
 	.probe = dpu_dev_probe,

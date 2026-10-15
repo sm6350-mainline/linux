@@ -240,4 +240,10 @@ static inline void msm_drm_kms_uninit(struct device *dev)
 
 #endif
 
+#ifdef CONFIG_DRM_MSM_DPU
+void dpu_quiesce_bootloader_scanout(struct device *mdss_dev);
+#else
+static inline void dpu_quiesce_bootloader_scanout(struct device *mdss_dev) {}
+#endif
+
 #endif /* __MSM_KMS_H__ */
