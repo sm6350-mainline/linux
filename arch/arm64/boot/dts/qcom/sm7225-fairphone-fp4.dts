@@ -42,6 +42,34 @@
 		serial1 = &uart1;
 	};
 
+	wcd938x: audio-codec {
+		compatible = "qcom,wcd9380-codec";
+
+		pinctrl-0 = <&wcd_reset_n>;
+		pinctrl-names = "default";
+
+		reset-gpios = <&tlmm 83 GPIO_ACTIVE_LOW>;
+
+		vdd-buck-supply = <&vreg_l14a>;
+		vdd-rxtx-supply = <&vreg_l11a>;
+		vdd-io-supply = <&vreg_l11a>;
+		vdd-mic-bias-supply = <&vreg_bob>;
+
+		qcom,micbias1-microvolt = <2700000>;
+		qcom,micbias2-microvolt = <2700000>;
+		qcom,micbias3-microvolt = <2700000>;
+		qcom,micbias4-microvolt = <2700000>;
+		qcom,mbhc-buttons-vthreshold-microvolt = <75000 150000 237000 500000
+							 500000 500000 500000 500000>;
+		qcom,mbhc-headset-vthreshold-microvolt = <1700000>;
+		qcom,mbhc-headphone-vthreshold-microvolt = <50000>;
+
+		qcom,rx-device = <&wcd_rx>;
+		qcom,tx-device = <&wcd_tx>;
+
+		#sound-dai-cells = <1>;
+	};
+
 	battery: battery {
 		compatible = "simple-battery";
 
@@ -1403,8 +1431,29 @@
 };
 
 &q6asmdai {
+	/*
+	 * Two front ends, split by direction.
+	 *
+	 * q6asm-dais builds its DAI list from these child nodes -- there is no
+	 * default set -- so a dai-link naming MULTIMEDIA2 without a dai@1 here
+	 * fails the whole card with "MultiMedia2: error getting cpu dai name".
+	 *
+	 * Splitting them rather than declaring one full-duplex front end is the
+	 * point: with a single front end, playback and capture contend for one
+	 * q6asm session and the second opener is refused with "Audio Client
+	 * already active", so the microphone and the speaker cannot be used at
+	 * once. Giving each direction its own front end also makes the ALSA
+	 * device list unambiguous -- aplay -l shows only MultiMedia1, arecord -l
+	 * only MultiMedia2 -- so nothing has to be told which to pick.
+	 */
 	dai@0 {
 		reg = <MSM_FRONTEND_DAI_MULTIMEDIA1>;
+		direction = <Q6ASM_DAI_RX>;
+	};
+
+	dai@1 {
+		reg = <MSM_FRONTEND_DAI_MULTIMEDIA2>;
+		direction = <Q6ASM_DAI_TX>;
 	};
 };
 
@@ -1453,6 +1502,10 @@
 	status = "okay";
 };
 
+&rxmacro {
+	status = "okay";
+};
+
 &sdc2_off_state {
 	sd-cd-pins {
 		pins = "gpio94";
@@ -1491,6 +1544,16 @@
 	compatible = "fairphone,fp4-sndcard";
 	model = "Fairphone 4";
 
+	audio-routing =
+		"AMIC1", "MIC BIAS1",
+		"AMIC3", "MIC BIAS3",
+		"AMIC4", "MIC BIAS3",
+		"AMIC5", "MIC BIAS4",
+		"TX SWR_ADC0", "ADC1_OUTPUT",
+		"TX SWR_ADC1", "ADC2_OUTPUT",
+		"TX SWR_ADC2", "ADC3_OUTPUT",
+		"TX SWR_ADC3", "ADC4_OUTPUT";
+
 	pinctrl-0 = <&i2s1_active>;
 	pinctrl-1 = <&i2s1_sleep>;
 	pinctrl-names = "default",
@@ -1503,6 +1566,34 @@
 			sound-dai = <&q6asmdai MSM_FRONTEND_DAI_MULTIMEDIA1>;
 		};
 	};
+
+	/*
+	 * A second front end, for capture.
+	 *
+	 * With only MultiMedia1 declared, the card exposes exactly one PCM and
+	 * `aplay -l` and `arecord -l` both name it. Playback and capture then
+	 * contend for a single q6asm session, and whichever opens second is
+	 * refused:
+	 *
+	 *   q6asm-dai: Audio Client already active
+	 *   q6asm-dai: q6asm_dai_prepare: q6asm_open_write failed
+	 *   ASoC error (-22): at snd_soc_pcm_component_prepare()
+	 *
+	 * which on a phone means the microphone and the speaker cannot be used
+	 * at the same time -- no call audio, and a recorder that fails if
+	 * anything played recently. A second front end gives capture its own
+	 * session. q6routing already carries the mixers for MultiMedia1..8, so
+	 * nothing else has to change to reach it.
+	 */
+	mm2-dai-link {
+		link-name = "MultiMedia2";
+
+		cpu {
+			sound-dai = <&q6asmdai MSM_FRONTEND_DAI_MULTIMEDIA2>;
+		};
+	};
+
+
 
 	usb-dai-link {
 		link-name = "USB Playback";
@@ -1534,6 +1625,69 @@
 		codec {
 			sound-dai = <&aw882xx_l>, <&aw882xx_r>;
 		};
+	};
+
+	/*
+	 * The codec's PLAYBACK link, on a handset with no headphone jack.
+	 *
+	 * Not vestigial. Without it nothing references swr1 or the RX macro, so
+	 * neither binds to the card -- and the wcd938x's DAPM graph spans both
+	 * halves of the codec. With only the capture link bound, every widget on
+	 * the capture path stays Off with "out 0" and the backend DAI never
+	 * starts, which is silence with no error anywhere. Every board carrying
+	 * this codec declares both links; this one is here for the same reason
+	 * qcom,rx-device is, not because anything plays through it.
+	 */
+	wcd-playback-dai-link {
+		link-name = "WCD Playback";
+
+		cpu {
+			sound-dai = <&q6afedai RX_CODEC_DMA_RX_0>;
+		};
+
+		codec {
+			sound-dai = <&wcd938x 0>, <&swr1 0>, <&rxmacro 0>;
+		};
+
+		platform {
+			sound-dai = <&q6routing>;
+		};
+	};
+
+	wcd-capture-dai-link {
+		link-name = "WCD Capture";
+
+		cpu {
+			sound-dai = <&q6afedai TX_CODEC_DMA_TX_3>;
+		};
+
+		codec {
+			sound-dai = <&wcd938x 1>, <&swr2 0>, <&txmacro 0>;
+		};
+
+		platform {
+			sound-dai = <&q6routing>;
+		};
+	};
+};
+
+&swr1 {
+	status = "okay";
+
+	wcd_rx: codec@0,4 {
+		compatible = "sdw20217010d00";
+		reg = <0 4>;
+		qcom,rx-port-mapping = <1 2 3 4 5>;
+	};
+};
+
+&swr2 {
+	status = "okay";
+
+	wcd_tx: codec@0,3 {
+		compatible = "sdw20217010d00";
+		reg = <0 3>;
+		qcom,tx-port-mapping = <2 3 4 5>;
 	};
 };
 
@@ -1679,6 +1833,18 @@
 			bias-pull-down;
 		};
 	};
+
+	wcd_reset_n: wcd-reset-n-state {
+		pins = "gpio83";
+		function = "gpio";
+		drive-strength = <16>;
+		output-high;
+	};
+
+};
+
+&txmacro {
+	status = "okay";
 };
 
 &uart1 {
@@ -1756,6 +1922,10 @@
 
 &usb_1_qmpphy_out {
 	remote-endpoint = <&pm7250b_ss_in>;
+};
+
+&vamacro {
+	status = "okay";
 };
 
 &wifi {
