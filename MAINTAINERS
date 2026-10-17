@@ -4378,6 +4378,13 @@ L:	linux-media@vger.kernel.org
 S:	Maintained
 F:	drivers/media/pci/hws/
 
+AWINIC AW88264 CODEC DRIVER
+M:	Tim auf der Landwehr <tadl-git@taufderl.de>
+L:	linux-sound@vger.kernel.org
+S:	Maintained
+F:	Documentation/devicetree/bindings/sound/awinic,aw88264.yaml
+F:	sound/soc/codecs/aw88264.*
+
 AWINIC AW99706 WLED BACKLIGHT DRIVER
 M:	Junjie Cao <caojunjie650@gmail.com>
 S:	Maintained

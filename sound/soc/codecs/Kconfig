@@ -691,6 +691,18 @@ config SND_SOC_AW88166
 	  digital Smart K audio amplifier with sound quality
 	  enhancement algorithms and speaker protection.
 
+config SND_SOC_AW88264
+	tristate "Soc Audio for awinic aw88264"
+	depends on I2C
+	select REGMAP_I2C
+	help
+	  The awinic AW88264 is an I2S input smart audio amplifier.
+	  It reports chip id 0x1852 and has a register map distinct
+	  from the aw88395 family, so it needs its own driver rather
+	  than an entry in one of theirs. Say Y or M to build support
+	  for it; it is found in pairs on some handsets, driving the
+	  loudspeaker and the earpiece.
+
 config SND_SOC_AW88261
 	tristate "Soc Audio for awinic aw88261"
 	depends on I2C
