@@ -1048,6 +1048,7 @@ properties:
       - items:
           - enum:
               - fairphone,fp4
+              - samsung,gts7xllite
           - const: qcom,sm7225
 
       - items:
