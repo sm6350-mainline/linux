@@ -87,14 +87,6 @@
 		};
 	};
 
-	/* Dummy regulator until PM6150L has LCDB VSP/VSN support */
-	lcdb_dummy: regulator-lcdb-dummy {
-		compatible = "regulator-fixed";
-		regulator-name = "lcdb_dummy";
-		regulator-min-microvolt = <5500000>;
-		regulator-max-microvolt = <5500000>;
-	};
-
 	vph_pwr: regulator-vph-pwr {
 		compatible = "regulator-fixed";
 
@@ -1096,8 +1088,8 @@
 		reset-gpios = <&pm6150l_gpios 9 GPIO_ACTIVE_LOW>;
 
 		vdd1-supply = <&vreg_l1e>;
-		vsn-supply = <&lcdb_dummy>;
-		vsp-supply = <&lcdb_dummy>;
+		vsn-supply = <&pm6150l_lcdb_ncp>;
+		vsp-supply = <&pm6150l_lcdb_ldo>;
 
 		port {
 			panel_in: endpoint {
@@ -1235,6 +1227,20 @@
 		function = PMIC_GPIO_FUNC_NORMAL;
 		bias-high-impedance;
 	};
+};
+
+&pm6150l_lcdb {
+	status = "okay";
+};
+
+&pm6150l_lcdb_ldo {
+	regulator-min-microvolt = <5500000>;
+	regulator-max-microvolt = <5500000>;
+};
+
+&pm6150l_lcdb_ncp {
+	regulator-min-microvolt = <5500000>;
+	regulator-max-microvolt = <5500000>;
 };
 
 &pm6150l_wled {
