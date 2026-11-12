@@ -135,5 +135,19 @@
 
 			status = "disabled";
 		};
+
+		pm6150l_lcdb: regulator@ec00 {
+			compatible = "qcom,pm6150l-lcdb", "qcom,pm8150l-lcdb";
+			reg = <0xec00>;
+			interrupts = <0x5 0xec 0x1 IRQ_TYPE_EDGE_RISING>;
+
+			status = "disabled";
+
+			pm6150l_lcdb_ldo: ldo {
+			};
+
+			pm6150l_lcdb_ncp: ncp {
+			};
+		};
 	};
 };
